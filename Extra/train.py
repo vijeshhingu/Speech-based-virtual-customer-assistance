@@ -2,6 +2,8 @@ import pandas as pd
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.svm import LinearSVC
 from sklearn.pipeline import Pipeline
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score
 import joblib
 
 # Load dataset
@@ -11,27 +13,33 @@ data = pd.read_csv('new_data.csv')
 X = data['instruction']
 y = data['response']
 
-# Initialize TfidfVectorizer
-tfidf_vectorizer = TfidfVectorizer()
+# Train-test split (80% train, 20% test)
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-# Initialize LinearSVC classifier
-svm_classifier = LinearSVC()
+# Initialize TfidfVectorizer with optimizations
+tfidf_vectorizer = TfidfVectorizer(stop_words='english', max_df=0.95, min_df=2)
 
-# Create pipeline
-pipeline = Pipeline([('tfidf', tfidf_vectorizer),
-                     ('clf', svm_classifier)])
+# Initialize LinearSVC with optimal parameters
+svm_classifier = LinearSVC(dual=False)
 
-# Fit the pipeline
-pipeline.fit(X, y)
+# Create and train pipeline
+pipeline = Pipeline([('tfidf', tfidf_vectorizer), ('clf', svm_classifier)])
+pipeline.fit(X_train, y_train)
 
-# Save the trained model
+# Evaluate model
+y_pred = pipeline.predict(X_test)
+accuracy = accuracy_score(y_test, y_pred)
+print(f'Model Accuracy: {accuracy:.2f}')
+
+# Save trained model
 joblib.dump(pipeline, 'trained_model.joblib')
 
-# Test the trained model
+# Load model once
+model = joblib.load('trained_model.joblib')
+
+# Function to get response
 def get_response(instruction):
-    model = joblib.load('trained_model.joblib')
-    response = model.predict([instruction])
-    return response[0]
+    return model.predict([instruction])[0]
 
 # Example usage
 instruction = "I want to track my order."
